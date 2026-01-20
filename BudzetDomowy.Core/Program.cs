@@ -1,5 +1,6 @@
 ﻿using BudzetDomowy.Core.Patterns.FactoryMethod;
 using BudzetDomowy.Core.Patterns.ObserverMethod;
+using BudzetDomowy.Core.Patterns.CompositeMethod;
 
 namespace BudzetDomowy.Core
 {
@@ -22,7 +23,7 @@ namespace BudzetDomowy.Core
                 Console.WriteLine("1. Dodaj transakcję (Factory)");
                 Console.WriteLine("2. Zmień strategię prognoz (Strategy - TODO)");
                 Console.WriteLine("3. Generuj Raport (Builder - TODO)");
-                Console.WriteLine("4. Pokaż drzewo kategorii (Composite - TODO)");
+                Console.WriteLine("4. Pokaż drzewo kategorii");
                 Console.WriteLine("9. Pokaż listę transakcji (Debug)");
                 Console.WriteLine("0. Wyjdź");
                 Console.Write("Wybierz opcję: ");
@@ -45,7 +46,7 @@ namespace BudzetDomowy.Core
                         break;
 
                     case "4":
-                        Console.WriteLine("nie ma");
+                        CategoryTree.Root.Print();
                         break;
 
                     case "9":
