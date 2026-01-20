@@ -1,3 +1,5 @@
+using System;
+
 namespace BudzetDomowy.Core.Patterns.ObserverMethod
 {
     // Interfejs Obserwatora.

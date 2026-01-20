@@ -1,4 +1,6 @@
-﻿namespace BudzetDomowy.Core.Patterns.CompositeMethod
+﻿using System;
+
+namespace BudzetDomowy.Core.Patterns.CompositeMethod
 {
     // Abstrakcyjny komponent drzewa kategorii (wzorzec Composite).
     // Dzięki niemu klient traktuje pojedyncze kategorie i grupy kategorii w ten sam sposób.

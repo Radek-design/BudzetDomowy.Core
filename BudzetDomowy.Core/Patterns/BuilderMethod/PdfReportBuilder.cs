@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System;
 using BudzetDomowy.Core.Models;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
