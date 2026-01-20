@@ -1,4 +1,5 @@
 ﻿using BudzetDomowy.Core.Patterns.FactoryMethod;
+using BudzetDomowy.Core.Patterns.ObserverMethod;
 
 namespace BudzetDomowy.Core
 {
@@ -11,7 +12,8 @@ namespace BudzetDomowy.Core
             ITransactionFactory factory = new StandardTransactionFactory();
             double limit = 3000;
             BudgetManager manager = new BudgetManager(limit, factory);
-
+            manager.AddObserver(new AlertSystem());
+            manager.AddObserver(new EmailNotifier());
             bool running = true;
             while (running)
             {

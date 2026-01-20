@@ -12,7 +12,7 @@ namespace BudzetDomowy
         private double MonthlyLimit;
         private List<Transaction> transactions = new List<Transaction>();
 
-        // Observer (UML)
+        // Observer
         private List<IBudgetObserver> observers = new List<IBudgetObserver>();
 
         private ITransactionFactory _transactionFactory;
@@ -30,14 +30,14 @@ namespace BudzetDomowy
 
             Console.WriteLine($" Utworzono i dodano: {t.GetType().Name}");
 
-            // wg prezentacji: notify na wydatku
+            // notify na wydatku
             if (t is Expense)
             {
                 Notify();
             }
         }
 
-        // UML: Notify()
+        //Notify()
         public void Notify()
         {
             double balance = CalculateBalance();
