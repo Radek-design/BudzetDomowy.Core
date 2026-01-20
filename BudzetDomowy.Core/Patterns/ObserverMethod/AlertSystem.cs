@@ -2,6 +2,8 @@ using System;
 
 namespace BudzetDomowy.Core.Patterns.ObserverMethod
 {
+    // Obserwator odpowiedzialny za wizualną sygnalizację stanu budżetu w konsoli.
+    // Reaguje zmianą koloru tekstu w zależności od salda.
     public class AlertSystem : IBudgetObserver
     {
         public void Update(double balance, double limit)

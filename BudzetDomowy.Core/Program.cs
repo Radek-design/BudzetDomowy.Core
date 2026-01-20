@@ -13,7 +13,7 @@ namespace BudzetDomowy.Core
         static void Main(string[] args)
         {
             // QuestPDF Settings (jeśli używasz generowania PDF)
-            //QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+            QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
             Console.WriteLine("=== SYSTEM BUDŻET DOMOWY ===");
 
@@ -62,7 +62,7 @@ namespace BudzetDomowy.Core
                         // NOWOŚĆ: Wyświetlanie drzewa
                         manager.ShowCategoryTree();
                         break;
-                    case "9":
+                    case "5":
                         manager.ShowCurrentTransactions();
                         break;
                     case "0":
@@ -143,11 +143,28 @@ namespace BudzetDomowy.Core
 
         static void HandleReport(BudgetManager manager)
         {
-            Console.WriteLine("Format: 1. PDF, 2. CSV");
-            var rChoice = Console.ReadLine();
-            IReportBuilder builder = (rChoice == "2") ? new CsvReportBuilder() : new PdfReportBuilder();
+            Console.WriteLine(">> GENEROWANIE RAPORTU DO PLIKU (BUILDER)");
+            Console.WriteLine("Wybierz format:");
+            Console.WriteLine("1. PDF");
+            Console.WriteLine("2. CSV");
+
+            var choice = Console.ReadLine();
+            IReportBuilder builder = null;
+
+            if (choice == "1")
+                builder = new PdfReportBuilder();
+            else if (choice == "2")
+                builder = new CsvReportBuilder();
+            else
+            {
+                Console.WriteLine("Błąd wyboru.");
+                return;
+            }
+
             var report = manager.GenerateReport(builder);
+            Console.WriteLine("\n------------------------------------------------");
             Console.WriteLine(report.content);
+            Console.WriteLine("------------------------------------------------\n");
         }
     }
 }

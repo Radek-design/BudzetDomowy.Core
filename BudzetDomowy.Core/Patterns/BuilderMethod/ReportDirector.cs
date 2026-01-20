@@ -2,6 +2,9 @@ using BudzetDomowy.Core.Models;
 
 namespace BudzetDomowy.Core.Patterns.BuilderMethod;
 
+// Klasa Director (Kierownik).
+// Odpowiada za kolejność wykonywania kroków budowania raportu.
+// Nie wie, jaki format jest tworzony - wie tylko, w jakiej kolejności wywołać metody.
 public class ReportDirector
 {
     private readonly List<Transaction> _transactions;

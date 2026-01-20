@@ -2,6 +2,8 @@
 
 namespace BudzetDomowy.Core.Patterns.CompositeMethod
 {
+    // Liść (Leaf) w strukturze drzewa.
+    // Reprezentuje konkretną kategorię, która przechowuje kwoty.
     public class SingleCategory : CategoryComponent
     {
         private readonly List<double> _amounts = new();
@@ -13,6 +15,7 @@ namespace BudzetDomowy.Core.Patterns.CompositeMethod
             _amounts.Add(amount);
         }
 
+        // Suma dla liścia to suma jego własnych transakcji
         public override double GetTotalAmount()
         {
             double sum = 0;

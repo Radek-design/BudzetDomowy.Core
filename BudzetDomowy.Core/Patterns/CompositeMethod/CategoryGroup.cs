@@ -3,7 +3,8 @@ using System.Collections.Generic;
 
 namespace BudzetDomowy.Core.Patterns.CompositeMethod
 {
-
+    // Kompozyt (Composite) w strukturze drzewa.
+    // Przechowuje listę dzieci (innych grup lub kategorii) i deleguje do nich operacje.
     public class CategoryGroup : CategoryComponent
     {
         public IReadOnlyList<CategoryComponent> GetChildren() => _children;
@@ -22,6 +23,7 @@ namespace BudzetDomowy.Core.Patterns.CompositeMethod
             _children.Remove(component);
         }
 
+        // Rekurencja: Suma grupy to suma wszystkich jej dzieci
         public override double GetTotalAmount()
         {
             double sum = 0;

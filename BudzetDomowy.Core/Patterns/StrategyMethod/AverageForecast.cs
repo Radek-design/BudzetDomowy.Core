@@ -2,6 +2,7 @@ using BudzetDomowy.Core.Models;
 
 namespace BudzetDomowy.Core.Patterns.StrategyMethod;
 
+// Strategia konserwatywna: Prognoza na podstawie średniej arytmetycznej wszystkich wydatków.
 public class AverageForecast : IForecastingStrategy
 {
     public decimal PredictNextMonth(List<Transaction> history)

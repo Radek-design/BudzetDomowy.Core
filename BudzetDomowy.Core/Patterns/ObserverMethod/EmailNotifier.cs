@@ -2,6 +2,8 @@ using System;
 
 namespace BudzetDomowy.Core.Patterns.ObserverMethod
 {
+    // Symulacja zewnętrznego systemu powiadomień e-mail.
+    // Uruchamia się tylko w sytuacjach krytycznych (ujemne saldo).
     public class EmailNotifier : IBudgetObserver
     {
         public void Update(double balance, double limit)

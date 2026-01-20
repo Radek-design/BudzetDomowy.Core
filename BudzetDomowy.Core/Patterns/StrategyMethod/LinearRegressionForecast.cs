@@ -2,6 +2,7 @@ using BudzetDomowy.Core.Models;
 
 namespace BudzetDomowy.Core.Patterns.StrategyMethod;
 
+// Strategia zaawansowana: Wylicza trend wydatków metodą najmniejszych kwadratów.
 public class LinearRegressionForecast : IForecastingStrategy
 {
     public decimal PredictNextMonth(List<Transaction> history)

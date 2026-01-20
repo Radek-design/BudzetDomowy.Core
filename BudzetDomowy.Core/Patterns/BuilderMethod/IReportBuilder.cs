@@ -2,6 +2,8 @@ using BudzetDomowy.Core.Models;
 
 namespace BudzetDomowy.Core.Patterns.BuilderMethod;
 
+// Interfejs Budowniczego.
+// Definiuje etapy powstawania raportu, niezależnie od formatu końcowego.
 public interface IReportBuilder
 {
     public IReportBuilder BuildHeader();

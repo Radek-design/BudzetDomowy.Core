@@ -1,5 +1,8 @@
 ﻿namespace BudzetDomowy.Core.Patterns.CompositeMethod
 {
+
+    // Klasa statyczna inicjalizująca strukturę kategorii.
+    // Symuluje bazę danych kategorii dostępnych w systemie
     public static class CategoryTree
     {
         public static CategoryGroup Root { get; } = BuildDefaultTree();

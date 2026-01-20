@@ -10,11 +10,16 @@ using System.Linq;
 
 namespace BudzetDomowy
 {
+    // Główna klasa zarządcza (Context/Subject).
+    // Integruje wszystkie wzorce projektowe w jedną logikę biznesową.
     public class BudgetManager
     {
         private double MonthlyLimit;
+        // Lista przechowuje obiekty typu Transaction z poprawnej przestrzeni nazw
         private List<Transaction> transactions = new List<Transaction>();
+        // Observer: Lista subskrybentów
         private List<IBudgetObserver> observers = new List<IBudgetObserver>();
+        
         private ITransactionFactory _transactionFactory;
         private IForecastingStrategy _forecastingStrategy;
 
@@ -25,15 +30,14 @@ namespace BudzetDomowy
             _forecastingStrategy = new AverageForecast();
         }
 
-        // ZMIANA: Dodano parametr categoryName
+        // Dodaje nową transakcję, aktualizuje drzewo kategorii i powiadamia obserwatorów.
         public void AddTransaction(string type, double amount, string desc, DateTime date, string categoryName)
         {
-            // 1. Tworzenie transakcji przez Fabrykę
+            // 1. Factory Method: Delegacja tworzenia obiektu
             Transaction t = _transactionFactory.CreateTransaction(type, amount, desc, date, categoryName);
             transactions.Add(t);
 
-            // 2. Integracja z COMPOSITE: Aktualizacja drzewa kategorii
-            // Szukamy kategorii w drzewie
+            // 2. Composite: Aktualizacja struktury drzewiastej (tylko dla wydatków/kategorii)
             var categoryNode = CategoryTree.FindByName(categoryName);
 
             if (categoryNode is SingleCategory singleCat)
