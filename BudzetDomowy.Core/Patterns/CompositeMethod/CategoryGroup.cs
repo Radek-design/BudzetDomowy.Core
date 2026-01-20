@@ -3,8 +3,11 @@ using System.Collections.Generic;
 
 namespace BudzetDomowy.Core.Patterns.CompositeMethod
 {
+    
     public class CategoryGroup : CategoryComponent
     {
+        public IReadOnlyList<CategoryComponent> GetChildren() => _children;
+
         private readonly List<CategoryComponent> _children = new();
 
         public CategoryGroup(string name) : base(name) { }
