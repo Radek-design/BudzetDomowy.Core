@@ -1,8 +1,8 @@
-using BudzetDomowy.Core.Models;
+using BudzetDomowy.Models;
 
 namespace BudzetDomowy.Core.Patterns.StrategyMethod;
 
 public interface IForecastingStrategy
 {
-    public void PredictNextMonth(List<Transaction> history);
+    public decimal PredictNextMonth(List<Transaction> history);
 }
