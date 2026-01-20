@@ -29,4 +29,11 @@
     {
         public Income(double amount, string description) : base(amount, description) { }
     }
+
+    public class Report(string header, string footer, string content)
+    {
+        public string header { get; set; } = header;
+        public string footer { get; set; } = footer;
+        public string content { get; set; } = content;
+    }
 }
