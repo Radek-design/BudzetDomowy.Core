@@ -1,6 +1,7 @@
 ﻿using BudzetDomowy.Core.Models;
 using BudzetDomowy.Core.Patterns.FactoryMethod;
 using BudzetDomowy.Core.Patterns.ObserverMethod;
+using BudzetDomowy.Core.Patterns.CompositeMethod;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,6 +36,11 @@ namespace BudzetDomowy
             {
                 Notify();
             }
+            if (t.Category is SingleCategory leaf)
+            {
+                leaf.AddAmount(t.Amount);
+            }
+
         }
 
         //Notify()
