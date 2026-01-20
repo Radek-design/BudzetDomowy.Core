@@ -85,7 +85,6 @@ namespace BudzetDomowy.Core
                 return;
             }
 
-            // NOWOŚĆ: Ręczne wprowadzanie daty
             Console.Write("Data (RRRR-MM-DD) [Enter = dzisiaj]: ");
             string dateInput = Console.ReadLine();
             DateTime date;

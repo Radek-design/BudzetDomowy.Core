@@ -4,7 +4,6 @@ namespace BudzetDomowy.Core.Patterns.FactoryMethod
 {
     public interface ITransactionFactory
     {
-        // Dodano DateTime date do sygnatury
         Transaction CreateTransaction(string type, double amount, string description, DateTime date);
     }
 

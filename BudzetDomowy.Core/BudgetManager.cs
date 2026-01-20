@@ -24,7 +24,6 @@ namespace BudzetDomowy
             _forecastingStrategy = new AverageForecast();
         }
 
-        // ZMIANA: Dodano parametr DateTime date
         public void AddTransaction(string type, double amount, string desc, DateTime date)
         {
             Transaction t = _transactionFactory.CreateTransaction(type, amount, desc, date);
@@ -84,7 +83,6 @@ namespace BudzetDomowy
         public void ShowCurrentTransactions()
         {
             Console.WriteLine("\n--- Obecne Transakcje ---");
-            // Sortujemy po dacie, żeby było czytelniej
             foreach (var t in transactions.OrderBy(x => x.Date))
                 Console.WriteLine(t.ToString());
         }

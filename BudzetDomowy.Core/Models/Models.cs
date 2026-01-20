@@ -6,7 +6,6 @@
         public DateTime Date { get; set; }
         public string Description { get; set; }
 
-        // Dodano parametr DateTime date
         public Transaction(double amount, string description, DateTime date)
         {
             Amount = amount;
