@@ -1,5 +1,5 @@
 using System.Text;
-using BudzetDomowy.Models;
+using BudzetDomowy.Core.Models;
 
 namespace BudzetDomowy.Core.Patterns.BuilderMethod;
 

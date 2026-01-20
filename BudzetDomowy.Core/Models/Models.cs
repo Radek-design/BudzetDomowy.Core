@@ -32,8 +32,8 @@
 
     public class Report(string header, string footer, string content)
     {
-        public string header { get; set; } = header;
-        public string footer { get; set; } = footer;
-        public string content { get; set; } = content;
+        public string Header { get; set; } = header;
+        public string Footer { get; set; } = footer;
+        public string Content { get; set; } = content;
     }
 }
