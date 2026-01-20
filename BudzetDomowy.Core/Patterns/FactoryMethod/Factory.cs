@@ -2,21 +2,22 @@
 
 namespace BudzetDomowy.Core.Patterns.FactoryMethod
 {
-    // Interfejs "Creator" we wzorcu Factory Method.
-    // Definiuje kontrakt tworzenia transakcji bez ujawniania logiki instancjonowania.
+    // Interfejs Fabryki (Creator).
+    // Definiuje kontrakt tworzenia transakcji, separując logikę tworzenia obiektów od logiki biznesowej menedżera.
     public interface ITransactionFactory
     {
         Transaction CreateTransaction(string type, double amount, string description, DateTime date, string category);
     }
 
-    // Konkretna implementacja fabryki.
-    // Centralizuje logikę decyzyjną dotyczącą tego, jaką klasę transakcji utworzyć.
+    // Standardowa implementacja fabryki transakcji.
+    // Odpowiada za decyzję, którą klasę (Income czy Expense) instancjonować na podstawie tekstu.
     public class StandardTransactionFactory : ITransactionFactory
     {
+        // Tworzy odpowiedni obiekt transakcji na podstawie podanego typu.
+        // <param name="type">Typ transakcji ("wydatek" lub "przychod")</param>
         public Transaction CreateTransaction(string type, double amount, string description, DateTime date, string category)
         {
-            // Prosty switch zamiast rozbudowanych if-ów w głównej logice programu.
-            // Zapewnia łatwą rozszerzalność o nowe typy transakcji.
+            // Zastosowanie switch expression dla czytelności i uniknięcia wielopiętrowych if-ów.
             switch (type.ToLower())
             {
                 case "wydatek":

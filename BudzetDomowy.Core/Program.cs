@@ -3,8 +3,9 @@ using BudzetDomowy.Core.Patterns.FactoryMethod;
 using BudzetDomowy.Core.Patterns.ObserverMethod;
 using BudzetDomowy.Core.Patterns.StrategyMethod;
 using BudzetDomowy.Core.Patterns.BuilderMethod;
-using BudzetDomowy.Core.Patterns.CompositeMethod; // Using do Composite
+using BudzetDomowy.Core.Patterns.CompositeMethod;
 using System;
+using QuestPDF.Infrastructure;
 
 namespace BudzetDomowy.Core
 {
@@ -12,8 +13,8 @@ namespace BudzetDomowy.Core
     {
         static void Main(string[] args)
         {
-            // QuestPDF Settings (jeśli używasz generowania PDF)
-            QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+            // Ustawienie licencji dla biblioteki QuestPDF (wymagane w wersji Community)
+            QuestPDF.Settings.License = LicenseType.Community;
 
             Console.WriteLine("=== SYSTEM BUDŻET DOMOWY ===");
 
@@ -24,9 +25,11 @@ namespace BudzetDomowy.Core
                 Console.Write("Błędna wartość. Podaj liczbę: ");
             }
 
+            // Inicjalizacja Fabryki i Managera (Dependency Injection)
             ITransactionFactory factory = new StandardTransactionFactory();
             BudgetManager manager = new BudgetManager(limit, factory);
 
+            // Rejestracja Obserwatorów
             manager.AddObserver(new AlertSystem());
             manager.AddObserver(new EmailNotifier());
 
@@ -59,7 +62,7 @@ namespace BudzetDomowy.Core
                         HandleReport(manager);
                         break;
                     case "4":
-                        // NOWOŚĆ: Wyświetlanie drzewa
+                        // Wyświetlanie struktury drzewiastej (Composite)
                         manager.ShowCategoryTree();
                         break;
                     case "5":
@@ -75,6 +78,8 @@ namespace BudzetDomowy.Core
             }
         }
 
+        // Obsługuje interakcję z użytkownikiem przy dodawaniu nowej transakcji.
+        // Pobiera dane (typ, kwota, data, kategoria) i zleca dodanie do Managera.
         static void HandleAddTransaction(BudgetManager manager)
         {
             Console.WriteLine(">> DODAWANIE TRANSAKCJI");
@@ -92,23 +97,23 @@ namespace BudzetDomowy.Core
                 return;
             }
 
+            // Obsługa daty (przywrócona funkcjonalność)
             Console.Write("Data (RRRR-MM-DD) [Enter = dzisiaj]: ");
             string dateInput = Console.ReadLine();
             DateTime date = string.IsNullOrWhiteSpace(dateInput)
                 ? DateTime.Now
                 : (DateTime.TryParse(dateInput, out var d) ? d : DateTime.Now);
 
-            // OBSŁUGA COMPOSITE: Wybór kategorii
+            // Obsługa kategorii (Composite)
             Console.WriteLine("\nDostępne kategorie:");
-            // Wyświetlamy drzewo, żeby użytkownik wiedział co wpisać
-            CategoryTree.Root.Print();
+            CategoryTree.Root.Print(); // Wyświetlamy drzewo pomocniczo
 
             Console.Write("\nWpisz nazwę kategorii z listy powyżej (np. 'Sklep', 'Czynsz'): ");
             string category = Console.ReadLine();
 
             try
             {
-                // Przekazujemy kategorię do managera
+                // Przekazujemy wszystkie dane (w tym datę i kategorię) do managera
                 manager.AddTransaction(type, amount, desc, date, category);
                 Console.WriteLine("Sukces.");
             }
@@ -118,18 +123,29 @@ namespace BudzetDomowy.Core
             }
         }
 
+        // Obsługuje wybór strategii prognozowania i wyświetla wynik.
         static void HandleStrategy(BudgetManager manager)
         {
             Console.WriteLine(">> PROGNOZOWANIE");
-            Console.WriteLine("1. Średnia");
-            Console.WriteLine("2. Ostatni miesiąc");
-            Console.WriteLine("3. Regresja liniowa");
-
+            Console.WriteLine("1. Średnia (Average)");
+            Console.WriteLine("2. Ostatni miesiąc (LastMonth)");
+            Console.WriteLine("3. Regresja liniowa (LinearRegression)");
+            Console.WriteLine("4. Średnia ruchoma (MovingAverage - 3 msc)");
+            Console.WriteLine("5. Sezonowa (Seasonal)");
+            Console.Write("Twój Wybor: ");
             var sChoice = Console.ReadLine();
-            if (sChoice == "1") manager.SetForecastingStrategy(new AverageForecast());
-            else if (sChoice == "2") manager.SetForecastingStrategy(new LastMonthForecast());
-            else if (sChoice == "3") manager.SetForecastingStrategy(new LinearRegressionForecast());
-            else manager.SetForecastingStrategy(new AverageForecast());
+
+            // Dobór strategii w czasie rzeczywistym (Runtime)
+            IForecastingStrategy strategy = sChoice switch
+            {
+                "2" => new LastMonthForecast(),
+                "3" => new LinearRegressionForecast(),
+                "4" => new MovingAverageForecast(3),
+                "5" => new SeasonalForecast(),
+                _ => new AverageForecast() // Domyślnie
+            };
+
+            manager.SetForecastingStrategy(strategy);
 
             try
             {
@@ -141,9 +157,10 @@ namespace BudzetDomowy.Core
             }
         }
 
+        // Obsługuje generowanie raportów przy użyciu wzorca Builder.
         static void HandleReport(BudgetManager manager)
         {
-            Console.WriteLine(">> GENEROWANIE RAPORTU DO PLIKU (BUILDER)");
+            Console.WriteLine(">> GENEROWANIE RAPORTU DO PLIKU");
             Console.WriteLine("Wybierz format:");
             Console.WriteLine("1. PDF");
             Console.WriteLine("2. CSV");
@@ -163,7 +180,7 @@ namespace BudzetDomowy.Core
 
             var report = manager.GenerateReport(builder);
             Console.WriteLine("\n------------------------------------------------");
-            Console.WriteLine(report.content);
+            Console.WriteLine(report.content); // Wyświetla ścieżkę do pliku
             Console.WriteLine("------------------------------------------------\n");
         }
     }

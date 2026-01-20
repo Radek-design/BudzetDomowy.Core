@@ -1,7 +1,8 @@
 namespace BudzetDomowy.Core.Patterns.ObserverMethod
 {
     // Interfejs Obserwatora.
-    // Pozwala na luźne powiązanie (decoupling) między BudgetManagerem a systemami powiadomień.
+    // Umożliwia luźne powiązanie (decoupling) - BudgetManager nie musi wiedzieć,
+    // kto i w jaki sposób reaguje na zmiany w budżecie.
     public interface IBudgetObserver
     {
         void Update(double balance, double limit);

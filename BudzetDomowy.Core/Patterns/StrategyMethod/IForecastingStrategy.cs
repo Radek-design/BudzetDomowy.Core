@@ -2,9 +2,9 @@ using BudzetDomowy.Core.Models;
 
 namespace BudzetDomowy.Core.Patterns.StrategyMethod;
 
-// Interfejs Strategii.
-// Umożliwia dynamiczną wymianę algorytmów prognozowania bez zmiany kodu BudgetManagera.
+// Interfejs Strategii prognozowania.
+// Umożliwia dynamiczną wymianę algorytmów obliczeniowych w trakcie działania programu (Runtime).
 public interface IForecastingStrategy
 {
-    public decimal PredictNextMonth(List<Transaction> history);
+    decimal PredictNextMonth(List<Transaction> history);
 }

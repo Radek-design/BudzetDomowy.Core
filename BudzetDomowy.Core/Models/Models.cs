@@ -2,21 +2,21 @@
 
 namespace BudzetDomowy.Core.Models
 {
+    
+    // Klasa bazowa reprezentująca pojedynczą operację finansową.
+    // W kontekście wzorca Factory Method pełni rolę "Product".
     public abstract class Transaction
     {
-        
-        // Klasa bazowa reprezentująca pojedynczą operację finansową.
-        // Pełni rolę "Product" we wzorcu Factory Method.
-        
         public double Amount { get; set; }
         public DateTime Date { get; set; }
         public string Description { get; set; }
 
-        // Przechowujemy nazwę kategorii jako klucz do struktury Composite.
-        // Decyzja projektowa: Luźne powiązanie (loose coupling) ułatwia serializację do CSV/PDF.
+        // Nazwa kategorii powiązana z drzewem kategorii (Composite).
+        // Używamy luźnego powiązania (string), aby ułatwić zapis do CSV/PDF bez konieczności serializacji całych obiektów drzewa.
+        
         public string Category { get; set; }
 
-        public Transaction(double amount, string description, DateTime date, string category)
+        protected Transaction(double amount, string description, DateTime date, string category)
         {
             Amount = amount;
             Description = description;
@@ -26,27 +26,33 @@ namespace BudzetDomowy.Core.Models
 
         public override string ToString()
         {
-            return $"{Date:yyyy-MM-dd} | [{Category}] {Description}: {Amount} PLN";
+            return $"{Date:yyyy-MM-dd} | [{Category}] {Description}: {Amount:F2} PLN";
         }
     }
-    // Konkretny typ transakcji: Wydatek.
+
+    
+    // Konkretna implementacja transakcji: Wydatek.
+    // Wpływa negatywnie na saldo budżetu.
     public class Expense : Transaction
     {
         public Expense(double amount, string description, DateTime date, string category)
             : base(amount, description, date, category) { }
     }
-    // Konkretny typ transakcji: Przychód.
+
+    // Konkretna implementacja transakcji: Przychód.
+    // Zwiększa saldo budżetu.
     public class Income : Transaction
     {
         public Income(double amount, string description, DateTime date, string category)
             : base(amount, description, date, category) { }
     }
-    // Klasa DTO (Data Transfer Object) przenosząca gotowy raport.
+
+    // Obiekt transferu danych (DTO) reprezentujący wygenerowany raport.
+    // Przenosi gotową treść lub ścieżkę do pliku z warstwy Builder do warstwy prezentacji.
     public class Report(string header, string footer, string content)
     {
         public string header { get; set; } = header;
         public string footer { get; set; } = footer;
-        // Content zawiera treść tekstową lub ścieżkę do wygenerowanego pliku
         public string content { get; set; } = content;
     }
 }

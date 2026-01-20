@@ -7,8 +7,8 @@ using QuestPDF.Infrastructure;
 
 namespace BudzetDomowy.Core.Patterns.BuilderMethod;
 
-// Konkretny Budowniczy dla formatu PDF.
-// Wykorzystuje bibliotekę QuestPDF do renderowania graficznego raportu.
+// Budowniczy raportów PDF.
+// Wykorzystuje bibliotekę QuestPDF do generowania sformatowanego dokumentu z tabelami i kolorami.
 public class PdfReportBuilder : IReportBuilder
 {
     private List<Transaction> _transactions = new();
@@ -24,8 +24,7 @@ public class PdfReportBuilder : IReportBuilder
 
     public IReportBuilder BuildTable(List<Transaction> transactions)
     {
-        if (transactions != null)
-            _transactions = transactions;
+        if (transactions != null) _transactions = transactions;
         return this;
     }
 
@@ -43,75 +42,57 @@ public class PdfReportBuilder : IReportBuilder
 
     public Report GetReport()
     {
-        // Generujemy unikalną nazwę pliku
         string fileName = $"Raport_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
 
-        // Tworzymy dokument PDF
+        // Konfiguracja dokumentu QuestPDF
         Document.Create(container =>
         {
             container.Page(page =>
             {
-                page.Size(PageSizes.A4);
                 page.Margin(2, Unit.Centimetre);
-                page.PageColor(Colors.White);
                 page.DefaultTextStyle(x => x.FontSize(12));
 
-                // Nagłówek
-                page.Header()
-                    .Text(_header)
-                    .SemiBold().FontSize(20).FontColor(Colors.Blue.Medium);
+                page.Header().Text(_header).SemiBold().FontSize(20).FontColor(Colors.Blue.Medium);
 
-                // Treść (Tabela)
                 page.Content().PaddingVertical(1, Unit.Centimetre).Column(col =>
                 {
                     col.Item().Table(table =>
                     {
-                        table.ColumnsDefinition(columns =>
-                        {
-                            columns.ConstantColumn(100); // Data
-                            columns.RelativeColumn();    // Opis
-                            columns.RelativeColumn();    // Kategoria
-                            columns.ConstantColumn(80);  // Kwota
+                        table.ColumnsDefinition(c => {
+                            c.ConstantColumn(100);
+                            c.RelativeColumn();
+                            c.RelativeColumn();
+                            c.ConstantColumn(80);
                         });
 
-                        table.Header(header =>
-                        {
-                            header.Cell().Element(CellStyle).Text("Data");
-                            header.Cell().Element(CellStyle).Text("Opis");
-                            header.Cell().Element(CellStyle).Text("Kategoria");
-                            header.Cell().Element(CellStyle).Text("Kwota").AlignRight();
+                        table.Header(h => {
+                            h.Cell().Text("Data").Bold();
+                            h.Cell().Text("Opis").Bold();
+                            h.Cell().Text("Kategoria").Bold();
+                            h.Cell().Text("Kwota").Bold().AlignRight();
                         });
 
                         foreach (var t in _transactions)
                         {
-                            table.Cell().Element(CellStyle).Text(t.Date.ToString("yyyy-MM-dd"));
-                            table.Cell().Element(CellStyle).Text(t.Description);
-                            table.Cell().Element(CellStyle).Text(t.Category); // Jeśli masz pole Category
-
+                            table.Cell().Text(t.Date.ToString("yyyy-MM-dd"));
+                            table.Cell().Text(t.Description);
+                            table.Cell().Text(t.Category);
                             var color = t is Expense ? Colors.Red.Medium : Colors.Green.Medium;
-                            table.Cell().Element(CellStyle).Text($"{t.Amount:F2}").FontColor(color).AlignRight();
+                            table.Cell().Text($"{t.Amount:F2}").FontColor(color).AlignRight();
                         }
-
-                        static IContainer CellStyle(IContainer container) =>
-                            container.BorderBottom(1).BorderColor(Colors.Grey.Lighten2).PaddingVertical(5);
                     });
 
-                    col.Item().PaddingTop(20).Text("PODSUMOWANIE:").Bold();
-                    col.Item().Text(_summary);
+                    col.Item().PaddingTop(20).Text($"PODSUMOWANIE: {_summary}").Bold();
                 });
 
-                // Stopka
-                page.Footer().AlignCenter().Text(x =>
-                {
+                page.Footer().AlignCenter().Text(x => {
                     x.Span(_footer);
                     x.Span(" | Strona ");
                     x.CurrentPageNumber();
                 });
             });
-        })
-        .GeneratePdf(fileName); // Zapis fizyczny na dysku
+        }).GeneratePdf(fileName);
 
-        // Zwracamy informację o sukcesie
         return new Report(_header, _footer, $"WYGENEROWANO PLIK PDF:\n{Path.GetFullPath(fileName)}");
     }
 }

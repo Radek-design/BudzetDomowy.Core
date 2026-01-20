@@ -2,18 +2,15 @@ using BudzetDomowy.Core.Models;
 
 namespace BudzetDomowy.Core.Patterns.StrategyMethod;
 
-// Strategia naiwna: Zakłada, że przyszły miesiąc będzie taki sam jak ostatni.
+// Strategia Naiwna: Zakłada, że wydatki w przyszłym miesiącu będą identyczne jak w ostatnim zamkniętym miesiącu.
 public class LastMonthForecast : IForecastingStrategy
 {
     public decimal PredictNextMonth(List<Transaction> history)
     {
-        if (history == null)
-            throw new ArgumentNullException(nameof(history));
+        if (history == null) throw new ArgumentNullException(nameof(history));
+        if (!history.Any()) throw new InvalidOperationException("Brak historii transakcji.");
 
-        if (!history.Any())
-            throw new InvalidOperationException("Brak historii transakcji.");
-
-        // Sortujemy chronologicznie i bierzemy ostatnią grupę (miesiąc)
+        // Pobieramy ostatni miesiąc chronologicznie
         var lastMonthTotal = history
             .GroupBy(t => new { t.Date.Year, t.Date.Month })
             .OrderBy(g => g.Key.Year)
