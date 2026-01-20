@@ -1,11 +1,7 @@
-﻿using BudzetDomowy.Models;
-using BudzetDomowy.Patterns.Factory;
+﻿using BudzetDomowy.Core.Models;
+using BudzetDomowy.Core.Patterns.FactoryMethod;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace BudzetDomowy
+namespace BudzetDomowy.Core
 {
     public class BudgetManager
     {

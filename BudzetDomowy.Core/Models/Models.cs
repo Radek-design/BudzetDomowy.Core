@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace BudzetDomowy.Models
+﻿namespace BudzetDomowy.Core.Models
 {
     public abstract class Transaction
     {
