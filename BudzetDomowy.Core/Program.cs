@@ -1,9 +1,6 @@
-﻿using BudzetDomowy.Models;
-using BudzetDomowy.Patterns.Factory;
+﻿using BudzetDomowy.Core.Patterns.FactoryMethod;
 
-using System;
-
-namespace BudzetDomowy
+namespace BudzetDomowy.Core
 {
     class Program
     {

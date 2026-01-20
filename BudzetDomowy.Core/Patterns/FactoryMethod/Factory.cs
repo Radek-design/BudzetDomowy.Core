@@ -1,7 +1,6 @@
-﻿using BudzetDomowy.Models;
-using System;
+﻿using BudzetDomowy.Core.Models;
 
-namespace BudzetDomowy.Patterns.Factory
+namespace BudzetDomowy.Core.Patterns.FactoryMethod
 {
     public interface ITransactionFactory
     {
