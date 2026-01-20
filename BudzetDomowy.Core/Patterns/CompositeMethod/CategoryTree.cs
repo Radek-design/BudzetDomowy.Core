@@ -1,4 +1,6 @@
-﻿namespace BudzetDomowy.Core.Patterns.CompositeMethod
+﻿using System;
+
+namespace BudzetDomowy.Core.Patterns.CompositeMethod
 {
     // Klasa pomocnicza inicjalizująca strukturę drzewa kategorii.
     // Symuluje bazę danych dostępnych kategorii.

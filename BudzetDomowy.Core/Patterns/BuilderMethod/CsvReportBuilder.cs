@@ -1,6 +1,7 @@
 using System.Text;
 using BudzetDomowy.Core.Models;
 using System.IO;
+using System;
 
 namespace BudzetDomowy.Core.Patterns.BuilderMethod;
 
