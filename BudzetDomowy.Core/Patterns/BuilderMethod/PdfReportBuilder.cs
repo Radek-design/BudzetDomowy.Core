@@ -1,67 +1,98 @@
-using System.Text;
-using BudzetDomowy.Models;
+using System.Collections.Generic;
+using System.IO;
+using BudzetDomowy.Core.Models;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
 
 namespace BudzetDomowy.Core.Patterns.BuilderMethod;
 
+// Budowniczy raportów PDF.
+// Wykorzystuje bibliotekę QuestPDF do generowania sformatowanego dokumentu z tabelami i kolorami.
 public class PdfReportBuilder : IReportBuilder
 {
-    private StringBuilder _contentBuilder = new();
+    private List<Transaction> _transactions = new();
+    private string _summary = string.Empty;
     private string _header = string.Empty;
     private string _footer = string.Empty;
 
     public IReportBuilder BuildHeader()
     {
-        _header = "==== BUDGET REPORT ====";
-        _contentBuilder.AppendLine(_header);
-        _contentBuilder.AppendLine();
+        _header = "Raport Finansowy";
         return this;
     }
 
     public IReportBuilder BuildTable(List<Transaction> transactions)
     {
-        if (transactions == null)
-            throw new ArgumentNullException(nameof(transactions));
-
-        _contentBuilder.AppendLine("Date       | Description                 | Amount");
-        _contentBuilder.AppendLine("------------------------------------------------");
-
-        foreach (var t in transactions)
-        {
-            string date = t.Date.ToString("yyyy-MM-dd");
-            string desc = t.Description.PadRight(25).Substring(0, Math.Min(25, t.Description.Length));
-            string amount = t.Amount.ToString("F2").PadLeft(10);
-
-            _contentBuilder.AppendLine($"{date} | {desc} | {amount}");
-        }
-
-        _contentBuilder.AppendLine();
+        if (transactions != null) _transactions = transactions;
         return this;
     }
 
     public IReportBuilder BuildSummary(string stats)
     {
-        if (string.IsNullOrWhiteSpace(stats))
-            return this;
-
-        _contentBuilder.AppendLine("---- SUMMARY ----");
-        _contentBuilder.AppendLine(stats);
-        _contentBuilder.AppendLine();
+        _summary = stats;
         return this;
     }
 
     public IReportBuilder BuildFooter(string footer)
     {
-        _footer = footer ?? string.Empty;
-        _contentBuilder.AppendLine(_footer);
+        _footer = footer;
         return this;
     }
 
     public Report GetReport()
     {
-        return new Report(
-            header: _header,
-            footer: _footer,
-            content: _contentBuilder.ToString()
-        );
+        string fileName = $"Raport_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+
+        // Konfiguracja dokumentu QuestPDF
+        Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Margin(2, Unit.Centimetre);
+                page.DefaultTextStyle(x => x.FontSize(12));
+
+                page.Header().Text(_header).SemiBold().FontSize(20).FontColor(Colors.Blue.Medium);
+
+                page.Content().PaddingVertical(1, Unit.Centimetre).Column(col =>
+                {
+                    col.Item().Table(table =>
+                    {
+                        table.ColumnsDefinition(c => {
+                            c.ConstantColumn(100);
+                            c.RelativeColumn();
+                            c.RelativeColumn();
+                            c.ConstantColumn(80);
+                        });
+
+                        table.Header(h => {
+                            h.Cell().Text("Data").Bold();
+                            h.Cell().Text("Opis").Bold();
+                            h.Cell().Text("Kategoria").Bold();
+                            h.Cell().Text("Kwota").Bold().AlignRight();
+                        });
+
+                        foreach (var t in _transactions)
+                        {
+                            table.Cell().Text(t.Date.ToString("yyyy-MM-dd"));
+                            table.Cell().Text(t.Description);
+                            table.Cell().Text(t.Category);
+                            var color = t is Expense ? Colors.Red.Medium : Colors.Green.Medium;
+                            table.Cell().Text($"{t.Amount:F2}").FontColor(color).AlignRight();
+                        }
+                    });
+
+                    col.Item().PaddingTop(20).Text($"PODSUMOWANIE: {_summary}").Bold();
+                });
+
+                page.Footer().AlignCenter().Text(x => {
+                    x.Span(_footer);
+                    x.Span(" | Strona ");
+                    x.CurrentPageNumber();
+                });
+            });
+        }).GeneratePdf(fileName);
+
+        return new Report(_header, _footer, $"WYGENEROWANO PLIK PDF:\n{Path.GetFullPath(fileName)}");
     }
 }

@@ -1,12 +1,14 @@
-using BudzetDomowy.Models;
+using BudzetDomowy.Core.Models;
 
 namespace BudzetDomowy.Core.Patterns.BuilderMethod;
 
+// Interfejs Budowniczego.
+// Definiuje kroki niezbędne do stworzenia raportu, niezależnie od jego formatu (PDF/CSV).
 public interface IReportBuilder
 {
-    public IReportBuilder BuildHeader();
-    public IReportBuilder BuildTable(List<Transaction> transactions);
-    public IReportBuilder BuildFooter(string footer);
-    public IReportBuilder BuildSummary(string stats);
-    public Report GetReport();
+    IReportBuilder BuildHeader();
+    IReportBuilder BuildTable(List<Transaction> transactions);
+    IReportBuilder BuildFooter(string footer);
+    IReportBuilder BuildSummary(string stats);
+    Report GetReport();
 }

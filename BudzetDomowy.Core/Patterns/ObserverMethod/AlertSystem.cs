@@ -2,11 +2,12 @@ using System;
 
 namespace BudzetDomowy.Core.Patterns.ObserverMethod
 {
+    // System alertów wizualnych w konsoli.
+    // Reaguje na zmianę stanu budżetu, zmieniając kolor tekstu (Zielony/Czerwony).
     public class AlertSystem : IBudgetObserver
     {
         public void Update(double balance, double limit)
         {
-            // zielony gdy jest ok, czerwony gdy przekroczony limit (saldo < 0)
             if (balance >= 0)
             {
                 Console.ForegroundColor = ConsoleColor.Green;

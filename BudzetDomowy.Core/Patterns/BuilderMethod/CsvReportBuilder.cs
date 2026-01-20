@@ -1,69 +1,55 @@
 using System.Text;
-using BudzetDomowy.Models;
+using BudzetDomowy.Core.Models;
+using System.IO;
 
 namespace BudzetDomowy.Core.Patterns.BuilderMethod;
 
+// Budowniczy raportów CSV.
+// Generuje plik tekstowy z danymi oddzielonymi przecinkami, gotowy do importu w Excelu.
 public class CsvReportBuilder : IReportBuilder
 {
-    private StringBuilder _contentBuilder = new();
-    private string _header = string.Empty;
-    private string _footer = string.Empty;
+    private StringBuilder _sb = new StringBuilder();
+    private string _header = "";
+    private string _footer = "";
+    private string _summary = "";
 
     public IReportBuilder BuildHeader()
     {
-        _header = "Date,Description,Amount";
+        _header = "Data,Kategoria,Opis,Kwota,Typ";
         return this;
     }
 
     public IReportBuilder BuildTable(List<Transaction> transactions)
     {
-        if (transactions == null)
-            throw new ArgumentNullException(nameof(transactions));
-
+        _sb.AppendLine(_header);
         foreach (var t in transactions)
         {
-            _contentBuilder.AppendLine(
-                $"{t.Date:yyyy-MM-dd},{Escape(t.Description)},{t.Amount}");
+            string type = t is Expense ? "Wydatek" : "Przychod";
+            // Zabezpieczenie przed uszkodzeniem CSV przecinkami w opisie
+            string safeDesc = t.Description.Contains(",") ? $"\"{t.Description}\"" : t.Description;
+            _sb.AppendLine($"{t.Date:yyyy-MM-dd},{t.Category},{safeDesc},{t.Amount},{type}");
         }
         return this;
     }
 
     public IReportBuilder BuildSummary(string stats)
     {
-        if (string.IsNullOrWhiteSpace(stats))
-            return this;
-
-        _contentBuilder.AppendLine();
-        _contentBuilder.AppendLine($"Summary,{Escape(stats)}");
+        _summary = stats;
+        _sb.AppendLine($"\nSUMMARY,,,,{stats}");
         return this;
     }
 
     public IReportBuilder BuildFooter(string footer)
     {
-        _footer = footer ?? string.Empty;
+        _footer = footer;
+        _sb.AppendLine($",,,,{footer}");
         return this;
     }
 
     public Report GetReport()
     {
-        return new Report(
-            header: _header,
-            footer: _footer,
-            content: _contentBuilder.ToString()
-        );
-    }
-
-    private static string Escape(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-            return string.Empty;
-
-        if (value.Contains(',') || value.Contains('"'))
-        {
-            value = value.Replace("\"", "\"\"");
-            return $"\"{value}\"";
-        }
-
-        return value;
+        string fileName = $"Dane_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+        File.WriteAllText(fileName, _sb.ToString());
+        return new Report("CSV Export", _footer, $"WYGENEROWANO PLIK CSV:\n{Path.GetFullPath(fileName)}");
     }
 }

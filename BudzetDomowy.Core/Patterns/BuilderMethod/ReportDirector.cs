@@ -1,7 +1,9 @@
-using BudzetDomowy.Models;
+using BudzetDomowy.Core.Models;
 
 namespace BudzetDomowy.Core.Patterns.BuilderMethod;
 
+// Klasa Dyrektora (Director).
+// Odpowiada za sekwencję kroków budowania raportu. Nie zna szczegółów implementacji formatów.
 public class ReportDirector
 {
     private readonly List<Transaction> _transactions;
@@ -17,9 +19,9 @@ public class ReportDirector
 
     public void Construct(IReportBuilder reportBuilder)
     {
-        if (reportBuilder == null)
-            throw new ArgumentNullException(nameof(reportBuilder));
+        if (reportBuilder == null) throw new ArgumentNullException(nameof(reportBuilder));
 
+        // Ustala kolejność sekcji w raporcie
         reportBuilder.BuildHeader();
         reportBuilder.BuildTable(_transactions);
         reportBuilder.BuildSummary(_summary);
