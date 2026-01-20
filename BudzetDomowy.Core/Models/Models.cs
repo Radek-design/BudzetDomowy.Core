@@ -47,7 +47,7 @@ namespace BudzetDomowy.Core.Models
             : base(amount, description, date, category) { }
     }
 
-    // Obiekt transferu danych (DTO) reprezentujący wygenerowany raport.
+    // Obiekt transferu danych reprezentujący wygenerowany raport.
     // Przenosi gotową treść lub ścieżkę do pliku z warstwy Builder do warstwy prezentacji.
     public class Report(string header, string footer, string content)
     {
