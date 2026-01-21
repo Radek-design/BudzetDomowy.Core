@@ -16,16 +16,29 @@ namespace BudzetDomowy.Core
         {
             try
             {
+                // Ustawienie licencji QuestPDF
                 QuestPDF.Settings.License = LicenseType.Community;
-
                 Console.WriteLine("=== SYSTEM BUDŻET DOMOWY ===");
 
-                double limit = GetValidDouble("Podaj miesięczny LIMIT wydatków (cel, np. 3000): ");
-                double initialBalance = GetValidDouble("Podaj SALDO początkowe (ile masz teraz pieniędzy): ");
-
                 ITransactionFactory factory = new StandardTransactionFactory();
-                BudgetManager manager = new BudgetManager(limit, initialBalance, factory);
+                BudgetManager manager = new BudgetManager(0, 0, factory);
 
+                // Próba odczytu danych przy starcie
+                if (manager.LoadData())
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine(">> Wczytano dane.");
+                    Console.ResetColor();
+                }
+                else
+                {
+                    Console.WriteLine(">> Konfiguracja nowej sesji.");
+                    double limit = GetValidDouble("Podaj miesięczny LIMIT wydatków: ");
+                    double initial = GetValidDouble("Podaj SALDO początkowe: ");
+                    manager = new BudgetManager(limit, initial, factory);
+                }
+
+                // Dodanie obserwatorów
                 manager.AddObserver(new AlertSystem());
                 manager.AddObserver(new EmailNotifier());
 
@@ -34,8 +47,8 @@ namespace BudzetDomowy.Core
                 {
                     try
                     {
-                        ShowMenu(manager.CalculateBalance(), limit);
-                        var choice = Console.ReadLine();
+                        ShowMenu(manager.CalculateBalance(), manager.MonthlyLimit);
+                        string choice = Console.ReadLine();
                         Console.WriteLine();
 
                         switch (choice)
@@ -43,226 +56,171 @@ namespace BudzetDomowy.Core
                             case "1": HandleAddTransaction(manager); break;
                             case "2": HandleStrategy(manager); break;
                             case "3": HandleReport(manager); break;
-                            case "4":
-                                manager.ShowCategoryTree();
-                                PressAnyKeyToReturn();
-                                break;
-                            case "5":
-                                manager.ShowCurrentTransactions();
-                                PressAnyKeyToReturn();
-                                break;
-                            case "0": running = false; break;
-                            default: Console.WriteLine(">> Nieznana opcja."); break;
+                            case "4": manager.ShowCategoryTree(); PressAnyKeyToReturn(); break;
+                            case "5": manager.ShowCurrentTransactions(); PressAnyKeyToReturn(); break;
+                            case "6": HandleManageCategories(manager); break; // ZMIANA
+                            case "0": manager.SaveData(); running = false; break;
+                            default: Console.WriteLine("Nieznana opcja."); break;
                         }
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) { Console.WriteLine($"[BŁĄD]: {ex.Message}"); }
+                }
+            }
+            catch (Exception ex) { Console.WriteLine($"[CRITICAL]: {ex.Message}"); }
+        }
+        // --- MENU GŁÓWNE ---
+        static void ShowMenu(double balance, double limit)
+        {
+            Console.WriteLine("\n------------------------------------------------");
+            Console.WriteLine($"SALDO: {balance:0.00} PLN (Cel: {limit:0.00})");
+            Console.WriteLine("1. Dodaj transakcję");
+            Console.WriteLine("2. Prognoza");
+            Console.WriteLine("3. Raport");
+            Console.WriteLine("4. Pokaż Kategorie");
+            Console.WriteLine("5. Pokaż Transakcje");
+            Console.WriteLine("6. ZARZĄDZAJ KATEGORIAMI (+/-)");
+            Console.WriteLine("0. Zapisz i Wyjdź");
+            Console.Write("Wybór: ");
+        }
+
+        // --- PODMENU ZARZĄDZANIA KATEGORIAMI ---
+        static void HandleManageCategories(BudgetManager manager)
+        {
+            Console.WriteLine("\n>> ZARZĄDZANIE KATEGORIAMI");
+            Console.WriteLine("1. Dodaj Podkategorię (Liść, np. 'Paliwo')");
+            Console.WriteLine("2. Dodaj Grupę Nadrzędną (Węzeł, np. 'Inwestycje')");
+            Console.WriteLine("3. Usuń Kategorię/Grupę");
+            Console.WriteLine("0. Powrót");
+            Console.Write("Wybór: ");
+
+            var choice = Console.ReadLine();
+            if (choice == "0") return;
+
+            Console.WriteLine("\n--- AKTUALNE DRZEWO ---");
+            CategoryTree.Root.Print();
+            Console.WriteLine("-----------------------");
+
+            try
+            {
+                if (choice == "1" || choice == "2")
+                {
+                    bool isGroup = (choice == "2");
+                    string typeName = isGroup ? "GRUPĘ" : "PODKATEGORIĘ";
+
+                    Console.Write($"\nWpisz nazwę RODZICA (gdzie dodać {typeName}): ");
+                    string parent = Console.ReadLine();
+
+                    Console.Write($"Wpisz nazwę NOWEJ {typeName}: ");
+                    string name = Console.ReadLine();
+
+                    if (!string.IsNullOrWhiteSpace(parent) && !string.IsNullOrWhiteSpace(name))
                     {
-                        Console.WriteLine($"[BŁĄD MENU]: {ex.Message}");
+                        manager.AddNewCategory(parent, name, isGroup);
+                        Console.WriteLine(">> Sukces.");
+                    }
+                }
+                else if (choice == "3")
+                {
+                    Console.Write("\nWpisz nazwę kategorii do USUNIĘCIA: ");
+                    string name = Console.ReadLine();
+                    if (!string.IsNullOrWhiteSpace(name))
+                    {
+                        manager.RemoveCategory(name);
+                        Console.WriteLine(">> Sukces. Usunięto.");
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[AWARIA SYSTEMU]: {ex.Message}");
+                Console.WriteLine($"BŁĄD: {ex.Message}");
             }
+            PressAnyKeyToReturn();
         }
 
-        static void ShowMenu(double balance, double limit)
-        {
-            Console.WriteLine("\n------------------------------------------------");
-            Console.WriteLine($"SALDO: {balance:0.00} PLN (Cel limitu: {limit:0.00} PLN)");
-            Console.WriteLine("1. Dodaj transakcję");
-            Console.WriteLine("2. Prognoza");
-            Console.WriteLine("3. Raport");
-            Console.WriteLine("4. Kategorie");
-            Console.WriteLine("5. Lista");
-            Console.WriteLine("0. Wyjdź z programu");
-            Console.Write("Wybór: ");
-        }
-
-        // --- 1. DODAWANIE TRANSAKCJI (z opcją powrotu) ---
+        // / --- DODAWANIE TRANSAKCJI ---
         static void HandleAddTransaction(BudgetManager manager)
         {
-            Console.WriteLine(">> DODAWANIE TRANSAKCJI");
-            Console.WriteLine("(Wpisz '0' w dowolnym momencie wyboru typu, aby anulować)");
-
-            // Walidacja TYPU z opcją powrotu
+            Console.WriteLine(">> DODAWANIE TRANSAKCJI (0=Anuluj)");
+            // Typ
             string type = "";
             while (true)
             {
                 Console.Write("Typ (wydatek/przychod): ");
-                string input = Console.ReadLine()?.ToLower().Trim();
-
-                // COFANIE: Jeśli użytkownik wpisze 0, wychodzimy z metody
-                if (input == "0")
-                {
-                    Console.WriteLine("Anulowano dodawanie.");
-                    return;
-                }
-
-                if (input == "wydatek" || input == "przychod" || input == "przychód")
-                {
-                    type = input;
-                    break;
-                }
-                Console.WriteLine("Błąd: Wpisz 'wydatek', 'przychod' lub '0' aby wrócić.");
+                string t = Console.ReadLine()?.ToLower().Trim();
+                if (t == "0") return;
+                if (t == "wydatek" || t == "przychod" || t == "przychód") { type = t; break; }
             }
-
-            Console.Write("Opis: ");
-            string desc = Console.ReadLine();
-
-            double amount = GetValidDouble("Kwota (musi być > 0): ");
-            while (amount <= 0)
-            {
-                Console.WriteLine("Kwota musi być dodatnia.");
-                amount = GetValidDouble("Kwota: ");
-            }
-
+            // Opis
+            Console.Write("Opis: "); string desc = Console.ReadLine();
+            // Kwota
+            double amount = GetValidDouble("Kwota: ");
+            if (amount <= 0) { Console.WriteLine("Musi być >0"); amount = GetValidDouble("Kwota: "); }
+            // Data
             DateTime date = GetValidDate();
 
             // Kategoria
-            string rootBranchName = (type == "wydatek") ? "WYDATKI" : "PRZYCHODY";
-            Console.WriteLine($"\n--- Wybierz kategorię z grupy {rootBranchName} ---");
+            string root = (type == "wydatek") ? "WYDATKI" : "PRZYCHODY";
+            Console.WriteLine($"\nDostępne w grupie {root}:");
+            var group = CategoryTree.GetGroupByName(root);
+            List<string> valids = new List<string>();
+            if (group != null) CollectCategoryNames(group, valids);
+            foreach (var v in valids) Console.WriteLine("- " + v);
 
-            var branchGroup = CategoryTree.GetGroupByName(rootBranchName);
-            List<string> validCategories = new List<string>();
-
-            if (branchGroup != null)
-            {
-                CollectCategoryNames(branchGroup, validCategories);
-                foreach (var catName in validCategories) Console.WriteLine($"- {catName}");
-            }
-
-            string category = "";
+            string cat = "";
             while (true)
             {
-                Console.Write($"\nWpisz nazwę kategorii ({type}) lub '0' aby anulować: ");
-                string input = Console.ReadLine();
-
-                if (input == "0") return; // Opcja cofnięcia na etapie kategorii
-
-                if (validCategories.Contains(input, StringComparer.OrdinalIgnoreCase))
-                {
-                    category = input;
-                    break;
-                }
-                Console.WriteLine($"Błąd: Kategoria '{input}' nie pasuje do typu {type}.");
+                Console.Write("Kategoria: ");
+                string c = Console.ReadLine();
+                if (c == "0") return;
+                if (valids.Contains(c, StringComparer.OrdinalIgnoreCase)) { cat = c; break; }
+                Console.WriteLine("Błędna kategoria (musi być liściem z listy powyżej).");
             }
 
+            manager.AddTransaction(type, amount, desc, date, cat);
+        }
+
+       // --- PODMENU STRATEGII PROGNOZOWANIA ---
+        static void HandleStrategy(BudgetManager m)
+        {
+            Console.WriteLine("1.Średnia 2.Ostatni 3.Regresja 4.Ruchoma 5.Sezonowa 0.Wróć");
+            var c = Console.ReadLine(); if (c == "0") return;
             try
             {
-                manager.AddTransaction(type, amount, desc, date, category);
-                Console.WriteLine(">> Sukces: Transakcja dodana.");
+                IForecastingStrategy s = c switch { "2" => new LastMonthForecast(), "3" => new LinearRegressionForecast(), "4" => new MovingAverageForecast(3), "5" => new SeasonalForecast(), _ => new AverageForecast() };
+                m.SetForecastingStrategy(s); Console.WriteLine($"Prognoza: {m.GetForecast()}");
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine("BŁĄD: " + ex.Message);
-            }
-        }
-
-        // --- 2. PROGNOZA ---
-        static void HandleStrategy(BudgetManager manager)
-        {
-            Console.WriteLine(">> WYBÓR STRATEGII");
-            Console.WriteLine("1. Średnia");
-            Console.WriteLine("2. Ostatni miesiąc");
-            Console.WriteLine("3. Regresja");
-            Console.WriteLine("4. Średnia ruchoma");
-            Console.WriteLine("5. Sezonowa");
-            Console.WriteLine("0. Powrót do menu"); // Opcja 0
-
-            Console.Write("Wybór: ");
-            var sChoice = Console.ReadLine();
-
-            if (sChoice == "0") return;
-
-            try
-            {
-                IForecastingStrategy strategy = sChoice switch
-                {
-                    "1" => new AverageForecast(),
-                    "2" => new LastMonthForecast(),
-                    "3" => new LinearRegressionForecast(),
-                    "4" => new MovingAverageForecast(3),
-                    "5" => new SeasonalForecast(),
-                    _ => null
-                };
-
-                if (strategy == null)
-                {
-                    Console.WriteLine("Nieznana strategia. Powrót do menu.");
-                    return;
-                }
-
-                manager.SetForecastingStrategy(strategy);
-                Console.WriteLine($"Prognoza: {manager.GetForecast()} PLN");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Błąd obliczeń: {ex.Message}");
-            }
+            catch (Exception e) { Console.WriteLine(e.Message); }
             PressAnyKeyToReturn();
         }
-
-        // --- 3. RAPORT (z opcją powrotu) ---
-        static void HandleReport(BudgetManager manager)
+        // --- PODMENU RAPORTÓW ---
+        static void HandleReport(BudgetManager m)
         {
-            Console.WriteLine(">> GENEROWANIE RAPORTU");
-            Console.WriteLine("Format: 1. PDF, 2. CSV, 0. Powrót");
-            Console.Write("Wybór: ");
-            string choice = Console.ReadLine();
-
-            if (choice == "0") return; // Cofnięcie
-
-            IReportBuilder builder = null;
-            if (choice == "1") builder = new PdfReportBuilder();
-            else if (choice == "2") builder = new CsvReportBuilder();
-            else
-            {
-                Console.WriteLine("Nieznany format.");
-                return;
-            }
-
-            Console.WriteLine(manager.GenerateReport(builder).content);
+            Console.WriteLine("1.PDF 2.CSV 0.Wróć");
+            var c = Console.ReadLine(); if (c == "0") return;
+            IReportBuilder b = c == "2" ? new CsvReportBuilder() : new PdfReportBuilder();
+            Console.WriteLine(m.GenerateReport(b).content);
             PressAnyKeyToReturn();
         }
-
-        // --- Metody Pomocnicze ---
-        static void PressAnyKeyToReturn()
+        static void PressAnyKeyToReturn() { Console.WriteLine("\n[Enter]..."); Console.ReadLine(); }
+        static double GetValidDouble(string p)
         {
-            Console.WriteLine("\n[Naciśnij dowolny klawisz, aby wrócić do menu...]");
-            Console.ReadKey();
+            while (true) { Console.Write(p); if (double.TryParse(Console.ReadLine(), out double v)) return v; }
         }
-
+        // -- POBIERANIE POPRAWNEJ DATY ---
         static DateTime GetValidDate()
         {
             while (true)
             {
-                Console.Write("Data (RRRR-MM-DD) [Enter = dzisiaj]: ");
-                string input = Console.ReadLine();
-                if (string.IsNullOrWhiteSpace(input)) return DateTime.Now;
-                if (DateTime.TryParse(input, out DateTime date)) return date;
-                Console.WriteLine("Błąd: Niepoprawny format daty.");
+                Console.Write("Data (RRRR-MM-DD): "); string s = Console.ReadLine();
+                if (string.IsNullOrWhiteSpace(s)) return DateTime.Now;
+                if (DateTime.TryParse(s, out DateTime d)) return d;
             }
         }
-
-        static void CollectCategoryNames(CategoryComponent component, List<string> list)
+        // --- ZBIERANIE NAZW KATEGORII REKURENCYJNIE ---
+        static void CollectCategoryNames(CategoryComponent c, List<string> l)
         {
-            if (component is SingleCategory) list.Add(component.Name);
-            else if (component is CategoryGroup group)
-            {
-                foreach (var child in group.GetChildren()) CollectCategoryNames(child, list);
-            }
-        }
-
-        static double GetValidDouble(string prompt)
-        {
-            while (true)
-            {
-                Console.Write(prompt);
-                if (double.TryParse(Console.ReadLine(), out double result)) return result;
-                Console.WriteLine("To nie jest poprawna liczba.");
-            }
+            if (c is SingleCategory) l.Add(c.Name);
+            else if (c is CategoryGroup g) foreach (var child in g.GetChildren()) CollectCategoryNames(child, l);
         }
     }
 }
