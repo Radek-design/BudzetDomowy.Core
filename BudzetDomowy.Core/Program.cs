@@ -5,6 +5,7 @@ using BudzetDomowy.Core.Patterns.StrategyMethod;
 using BudzetDomowy.Core.Patterns.BuilderMethod;
 using BudzetDomowy.Core.Patterns.CompositeMethod;
 using System;
+using System.Collections.Generic; // Potrzebne do List<>
 using QuestPDF.Infrastructure;
 
 namespace BudzetDomowy.Core
@@ -19,7 +20,6 @@ namespace BudzetDomowy.Core
 
                 Console.WriteLine("=== SYSTEM BUDŻET DOMOWY ===");
 
-                // Zabezpieczone pobieranie limitu
                 double limit = GetValidDouble("Podaj miesięczny limit wydatków (PLN): ");
 
                 ITransactionFactory factory = new StandardTransactionFactory();
@@ -45,22 +45,137 @@ namespace BudzetDomowy.Core
                             case "4": manager.ShowCategoryTree(); break;
                             case "5": manager.ShowCurrentTransactions(); break;
                             case "0": running = false; break;
-                            default: Console.WriteLine(">> Nieznana opcja. Spróbuj ponownie."); break;
+                            default: Console.WriteLine(">> Nieznana opcja."); break;
                         }
                     }
                     catch (Exception ex)
                     {
-                        // Wyłapuje błędy wewnątrz pętli menu, żeby program się nie zamknął
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"[BŁĄD KRYTYCZNY W MENU]: {ex.Message}");
-                        Console.ResetColor();
+                        Console.WriteLine($"[BŁĄD MENU]: {ex.Message}");
                     }
                 }
             }
             catch (Exception ex)
             {
-                // Błąd przy inicjalizacji (np. brak biblioteki PDF)
                 Console.WriteLine($"[AWARIA SYSTEMU]: {ex.Message}");
+            }
+        }
+
+        static void HandleAddTransaction(BudgetManager manager)
+        {
+            Console.WriteLine(">> DODAWANIE TRANSAKCJI");
+
+            // 1. Walidacja TYPU
+            string type = "";
+            while (true)
+            {
+                Console.Write("Typ (wydatek/przychod): ");
+                string input = Console.ReadLine()?.ToLower().Trim();
+                if (input == "wydatek" || input == "przychod" || input == "przychód")
+                {
+                    type = input;
+                    break;
+                }
+                Console.WriteLine("Błąd: Wpisz 'wydatek' lub 'przychod'.");
+            }
+
+            // 2. Pobieranie OPISU i KWOTY
+            Console.Write("Opis: ");
+            string desc = Console.ReadLine();
+            double amount = GetValidDouble("Kwota (musi być > 0): ");
+            while (amount <= 0)
+            {
+                Console.WriteLine("Kwota musi być dodatnia.");
+                amount = GetValidDouble("Kwota: ");
+            }
+
+            // 3. Walidacja DATY (Nowość)
+            DateTime date = GetValidDate();
+
+            // 4. Walidacja KATEGORII (Nowość - ścisłe powiązanie z typem)
+            string rootBranchName = (type == "wydatek") ? "WYDATKI" : "PRZYCHODY";
+
+            Console.WriteLine($"\n--- Wybierz kategorię z grupy {rootBranchName} ---");
+
+            // Pobieramy odpowiednią gałąź drzewa
+            var branchGroup = CategoryTree.GetGroupByName(rootBranchName);
+
+            // Pobieramy listę wszystkich dostępnych nazw w tej gałęzi (helper poniżej)
+            List<string> validCategories = new List<string>();
+            if (branchGroup != null)
+            {
+                CollectCategoryNames(branchGroup, validCategories);
+                // Wyświetlamy użytkownikowi listę
+                foreach (var catName in validCategories)
+                {
+                    Console.WriteLine($"- {catName}");
+                }
+            }
+
+            string category = "";
+            while (true)
+            {
+                Console.Write($"\nWpisz nazwę kategorii ({type}): ");
+                string input = Console.ReadLine();
+
+                // Sprawdzamy czy wpisana nazwa istnieje na liście dozwolonych
+                if (validCategories.Contains(input, StringComparer.OrdinalIgnoreCase))
+                {
+                    category = input; // Znaleziono poprawną
+                    break;
+                }
+                Console.WriteLine($"Błąd: Kategoria '{input}' nie istnieje w grupie {rootBranchName} lub zrobiłeś literówkę.");
+            }
+
+            try
+            {
+                manager.AddTransaction(type, amount, desc, date, category);
+                Console.WriteLine(">> Sukces: Transakcja dodana.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("BŁĄD: " + ex.Message);
+            }
+        }
+
+        // --- Metody Pomocnicze ---
+
+        static DateTime GetValidDate()
+        {
+            while (true)
+            {
+                Console.Write("Data (RRRR-MM-DD) [Enter = dzisiaj]: ");
+                string input = Console.ReadLine();
+
+                if (string.IsNullOrWhiteSpace(input))
+                {
+                    return DateTime.Now;
+                }
+
+                if (DateTime.TryParse(input, out DateTime date))
+                {
+                    return date;
+                }
+
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("Błąd: Niepoprawny format lub nieistniejąca data (np. 30 lutego). Spróbuj ponownie.");
+                Console.ResetColor();
+            }
+        }
+
+        static void CollectCategoryNames(CategoryComponent component, List<string> list)
+        {
+            // Jeśli to liść (SingleCategory), dodajemy do listy
+            if (component is SingleCategory)
+            {
+                list.Add(component.Name);
+            }
+            // Jeśli to grupa, wchodzimy głębiej
+            else if (component is CategoryGroup group)
+            {
+                foreach (var child in group.GetChildren())
+                {
+                    CollectCategoryNames(child, list);
+                }
             }
         }
 
@@ -77,57 +192,11 @@ namespace BudzetDomowy.Core
             Console.Write("Wybór: ");
         }
 
-        static void HandleAddTransaction(BudgetManager manager)
-        {
-            try
-            {
-                Console.WriteLine(">> DODAWANIE TRANSAKCJI");
-
-                Console.Write("Typ (wydatek/przychod): ");
-                string type = Console.ReadLine();
-                // Prosta walidacja typu
-                if (type.ToLower() != "wydatek" && type.ToLower() != "przychod" && type.ToLower() != "przychód")
-                {
-                    throw new ArgumentException("Niepoprawny typ. Wpisz 'wydatek' lub 'przychod'.");
-                }
-
-                Console.Write("Opis: ");
-                string desc = Console.ReadLine();
-                if (string.IsNullOrWhiteSpace(desc)) desc = "Bez opisu";
-
-                double amount = GetValidDouble("Kwota (musi być > 0): ");
-                if (amount <= 0) throw new ArgumentException("Kwota musi być dodatnia.");
-
-                Console.Write("Data (RRRR-MM-DD) [Enter = dzisiaj]: ");
-                string dateInput = Console.ReadLine();
-                DateTime date = string.IsNullOrWhiteSpace(dateInput)
-                    ? DateTime.Now
-                    : (DateTime.TryParse(dateInput, out var d) ? d : DateTime.Now);
-
-                // Wyświetlamy kategorie, żeby użytkownik wiedział gdzie trafi jego przychód/wydatek
-                Console.WriteLine("\n--- Dostępne Kategorie ---");
-                CategoryTree.Root.Print();
-                Console.WriteLine("--------------------------");
-
-                Console.Write("Wpisz nazwę kategorii z listy: ");
-                string category = Console.ReadLine();
-
-                manager.AddTransaction(type, amount, desc, date, category);
-                Console.WriteLine(">> Sukces: Transakcja dodana.");
-            }
-            catch (Exception ex)
-            {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"[BŁĄD DODAWANIA]: {ex.Message}");
-                Console.ResetColor();
-            }
-        }
-
         static void HandleStrategy(BudgetManager manager)
         {
             Console.WriteLine("1. Średnia, 2. Ostatni miesiąc, 3. Regresja, 4. Średnia ruchoma, 5. Sezonowa");
             var sChoice = Console.ReadLine();
-
+            // ... (reszta logiki strategii bez zmian) ...
             try
             {
                 IForecastingStrategy strategy = sChoice switch
@@ -138,49 +207,27 @@ namespace BudzetDomowy.Core
                     "5" => new SeasonalForecast(),
                     _ => new AverageForecast()
                 };
-
                 manager.SetForecastingStrategy(strategy);
                 Console.WriteLine($"Prognoza: {manager.GetForecast()} PLN");
             }
-            catch (Exception ex)
-            {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"[BŁĄD PROGNOZY]: {ex.Message}");
-                Console.ResetColor();
-            }
+            catch (Exception ex) { Console.WriteLine(ex.Message); }
         }
 
         static void HandleReport(BudgetManager manager)
         {
-            try
-            {
-                Console.WriteLine("Format: 1. PDF, 2. CSV");
-                string choice = Console.ReadLine();
-                IReportBuilder builder = choice == "2" ? new CsvReportBuilder() : new PdfReportBuilder();
-
-                var report = manager.GenerateReport(builder);
-                Console.WriteLine(report.content);
-            }
-            catch (Exception ex)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"[BŁĄD RAPORTU]: Nie udało się wygenerować pliku. {ex.Message}");
-                Console.ResetColor();
-            }
+            Console.WriteLine("Format: 1. PDF, 2. CSV");
+            string choice = Console.ReadLine();
+            IReportBuilder builder = choice == "2" ? new CsvReportBuilder() : new PdfReportBuilder();
+            Console.WriteLine(manager.GenerateReport(builder).content);
         }
 
-        // Pomocnicza metoda do bezpiecznego pobierania liczb
         static double GetValidDouble(string prompt)
         {
             while (true)
             {
                 Console.Write(prompt);
-                string input = Console.ReadLine();
-                if (double.TryParse(input, out double result))
-                {
-                    return result;
-                }
-                Console.WriteLine("To nie jest poprawna liczba. Spróbuj np. 150,50");
+                if (double.TryParse(Console.ReadLine(), out double result)) return result;
+                Console.WriteLine("To nie jest poprawna liczba.");
             }
         }
     }
