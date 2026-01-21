@@ -195,7 +195,7 @@ namespace BudzetDomowy.Core
         static void HandleStrategy(BudgetManager manager)
         {
             Console.WriteLine("1. Średnia, 2. Ostatni miesiąc, 3. Regresja, 4. Średnia ruchoma, 5. Sezonowa");
-            var sChoice = Console.ReadLine();.
+            var sChoice = Console.ReadLine();
             try
             {
                 IForecastingStrategy strategy = sChoice switch
