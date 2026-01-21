@@ -57,15 +57,15 @@ namespace BudzetDomowy
             }
         }
 
+        public void AddObserver(IBudgetObserver observer)
+        {
+            if (!observers.Contains(observer)) observers.Add(observer);
+        }
+
         public void Notify()
         {
             double balance = CalculateBalance();
             foreach (var obs in observers) obs.Update(balance, MonthlyLimit);
-        }
-
-        public void AddObserver(IBudgetObserver observer)
-        {
-            if (!observers.Contains(observer)) observers.Add(observer);
         }
 
         public void SetForecastingStrategy(IForecastingStrategy strategy)
@@ -102,7 +102,7 @@ namespace BudzetDomowy
 
         public void ShowCategoryTree()
         {
-            Console.WriteLine("\n--- Kategorie ---");
+            Console.WriteLine("\n--- STRUKTURA KATEGORII ---");
             CategoryTree.Root.Print();
         }
     }
