@@ -7,6 +7,6 @@ namespace BudzetDomowy.Core.Patterns.ObserverMethod
     // kto i w jaki sposób reaguje na zmiany w budżecie.
     public interface IBudgetObserver
     {
-        void Update(double balance, double limit);
+        void Update(double balance, double limit, double expenses);
     }
 }
