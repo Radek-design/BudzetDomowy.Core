@@ -5,7 +5,7 @@ using BudzetDomowy.Core.Patterns.StrategyMethod;
 using BudzetDomowy.Core.Patterns.BuilderMethod;
 using BudzetDomowy.Core.Patterns.CompositeMethod;
 using System;
-using System.Collections.Generic; // Potrzebne do List<>
+using System.Collections.Generic;
 using QuestPDF.Infrastructure;
 
 namespace BudzetDomowy.Core
@@ -91,7 +91,7 @@ namespace BudzetDomowy.Core
             // 3. Walidacja DATY (Nowość)
             DateTime date = GetValidDate();
 
-            // 4. Walidacja KATEGORII (Nowość - ścisłe powiązanie z typem)
+            // 4. Walidacja KATEGORII
             string rootBranchName = (type == "wydatek") ? "WYDATKI" : "PRZYCHODY";
 
             Console.WriteLine($"\n--- Wybierz kategorię z grupy {rootBranchName} ---");
@@ -195,8 +195,7 @@ namespace BudzetDomowy.Core
         static void HandleStrategy(BudgetManager manager)
         {
             Console.WriteLine("1. Średnia, 2. Ostatni miesiąc, 3. Regresja, 4. Średnia ruchoma, 5. Sezonowa");
-            var sChoice = Console.ReadLine();
-            // ... (reszta logiki strategii bez zmian) ...
+            var sChoice = Console.ReadLine();.
             try
             {
                 IForecastingStrategy strategy = sChoice switch
