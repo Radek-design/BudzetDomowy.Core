@@ -20,10 +20,16 @@ namespace BudzetDomowy.Core
 
                 Console.WriteLine("=== SYSTEM BUDŻET DOMOWY ===");
 
-                double limit = GetValidDouble("Podaj miesięczny limit wydatków (PLN): ");
+                // 1. Ustawienie Limitu (Budżetu) - Cel
+                double limit = GetValidDouble("Podaj miesięczny LIMIT wydatków (cel, np. 3000): ");
+
+                // 2. Ustawienie Salda Początkowego (Stan konta) - Rzeczywistość
+                double initialBalance = GetValidDouble("Podaj SALDO początkowe (ile masz teraz pieniędzy): ");
 
                 ITransactionFactory factory = new StandardTransactionFactory();
-                BudgetManager manager = new BudgetManager(limit, factory);
+
+                // Przekazujemy obie wartości do managera
+                BudgetManager manager = new BudgetManager(limit, initialBalance, factory);
 
                 manager.AddObserver(new AlertSystem());
                 manager.AddObserver(new EmailNotifier());
@@ -33,7 +39,8 @@ namespace BudzetDomowy.Core
                 {
                     try
                     {
-                        ShowMenu(manager.CalculateBalance());
+                        // Wyświetlamy saldo (Limit jest w nawiasie jako info)
+                        ShowMenu(manager.CalculateBalance(), limit);
                         var choice = Console.ReadLine();
                         Console.WriteLine();
 
@@ -60,11 +67,25 @@ namespace BudzetDomowy.Core
             }
         }
 
+        static void ShowMenu(double balance, double limit)
+        {
+            Console.WriteLine("\n------------------------------------------------");
+            // Wyświetlamy rzeczywiste saldo
+            Console.WriteLine($"SALDO: {balance:0.00} PLN (Twój cel limitu: {limit:0.00} PLN)");
+            Console.WriteLine("1. Dodaj transakcję");
+            Console.WriteLine("2. Prognoza");
+            Console.WriteLine("3. Raport");
+            Console.WriteLine("4. Kategorie");
+            Console.WriteLine("5. Lista");
+            Console.WriteLine("0. Wyjdź");
+            Console.Write("Wybór: ");
+        }
+
         static void HandleAddTransaction(BudgetManager manager)
         {
             Console.WriteLine(">> DODAWANIE TRANSAKCJI");
 
-            // 1. Walidacja TYPU
+            // Walidacja TYPU
             string type = "";
             while (true)
             {
@@ -78,9 +99,9 @@ namespace BudzetDomowy.Core
                 Console.WriteLine("Błąd: Wpisz 'wydatek' lub 'przychod'.");
             }
 
-            // 2. Pobieranie OPISU i KWOTY
             Console.Write("Opis: ");
             string desc = Console.ReadLine();
+
             double amount = GetValidDouble("Kwota (musi być > 0): ");
             while (amount <= 0)
             {
@@ -88,27 +109,19 @@ namespace BudzetDomowy.Core
                 amount = GetValidDouble("Kwota: ");
             }
 
-            // 3. Walidacja DATY (Nowość)
             DateTime date = GetValidDate();
 
-            // 4. Walidacja KATEGORII
+            // Walidacja KATEGORII (Przychod -> Gałąź PRZYCHODY, Wydatek -> Gałąź WYDATKI)
             string rootBranchName = (type == "wydatek") ? "WYDATKI" : "PRZYCHODY";
-
             Console.WriteLine($"\n--- Wybierz kategorię z grupy {rootBranchName} ---");
 
-            // Pobieramy odpowiednią gałąź drzewa
             var branchGroup = CategoryTree.GetGroupByName(rootBranchName);
-
-            // Pobieramy listę wszystkich dostępnych nazw w tej gałęzi (helper poniżej)
             List<string> validCategories = new List<string>();
+
             if (branchGroup != null)
             {
                 CollectCategoryNames(branchGroup, validCategories);
-                // Wyświetlamy użytkownikowi listę
-                foreach (var catName in validCategories)
-                {
-                    Console.WriteLine($"- {catName}");
-                }
+                foreach (var catName in validCategories) Console.WriteLine($"- {catName}");
             }
 
             string category = "";
@@ -116,14 +129,12 @@ namespace BudzetDomowy.Core
             {
                 Console.Write($"\nWpisz nazwę kategorii ({type}): ");
                 string input = Console.ReadLine();
-
-                // Sprawdzamy czy wpisana nazwa istnieje na liście dozwolonych
                 if (validCategories.Contains(input, StringComparer.OrdinalIgnoreCase))
                 {
-                    category = input; // Znaleziono poprawną
+                    category = input;
                     break;
                 }
-                Console.WriteLine($"Błąd: Kategoria '{input}' nie istnieje w grupie {rootBranchName} lub zrobiłeś literówkę.");
+                Console.WriteLine($"Błąd: Kategoria '{input}' nie pasuje do typu {type}.");
             }
 
             try
@@ -138,64 +149,31 @@ namespace BudzetDomowy.Core
         }
 
         // --- Metody Pomocnicze ---
-
         static DateTime GetValidDate()
         {
             while (true)
             {
                 Console.Write("Data (RRRR-MM-DD) [Enter = dzisiaj]: ");
                 string input = Console.ReadLine();
-
-                if (string.IsNullOrWhiteSpace(input))
-                {
-                    return DateTime.Now;
-                }
-
-                if (DateTime.TryParse(input, out DateTime date))
-                {
-                    return date;
-                }
-
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("Błąd: Niepoprawny format lub nieistniejąca data (np. 30 lutego). Spróbuj ponownie.");
-                Console.ResetColor();
+                if (string.IsNullOrWhiteSpace(input)) return DateTime.Now;
+                if (DateTime.TryParse(input, out DateTime date)) return date;
+                Console.WriteLine("Błąd: Niepoprawny format daty.");
             }
         }
 
         static void CollectCategoryNames(CategoryComponent component, List<string> list)
         {
-            // Jeśli to liść (SingleCategory), dodajemy do listy
-            if (component is SingleCategory)
-            {
-                list.Add(component.Name);
-            }
-            // Jeśli to grupa, wchodzimy głębiej
+            if (component is SingleCategory) list.Add(component.Name);
             else if (component is CategoryGroup group)
             {
-                foreach (var child in group.GetChildren())
-                {
-                    CollectCategoryNames(child, list);
-                }
+                foreach (var child in group.GetChildren()) CollectCategoryNames(child, list);
             }
-        }
-
-        static void ShowMenu(double balance)
-        {
-            Console.WriteLine("\n------------------------------------------------");
-            Console.WriteLine($"SALDO: {balance:0.00} PLN");
-            Console.WriteLine("1. Dodaj transakcję");
-            Console.WriteLine("2. Prognoza");
-            Console.WriteLine("3. Raport");
-            Console.WriteLine("4. Kategorie");
-            Console.WriteLine("5. Lista");
-            Console.WriteLine("0. Wyjdź");
-            Console.Write("Wybór: ");
         }
 
         static void HandleStrategy(BudgetManager manager)
         {
             Console.WriteLine("1. Średnia, 2. Ostatni miesiąc, 3. Regresja, 4. Średnia ruchoma, 5. Sezonowa");
-            var sChoice = Console.ReadLine();.
+            var sChoice = Console.ReadLine();
             try
             {
                 IForecastingStrategy strategy = sChoice switch

@@ -11,61 +11,79 @@ using System.Linq;
 namespace BudzetDomowy
 {
     // Główna klasa zarządcza (Context/Subject).
-    // Integruje wszystkie wzorce: zleca tworzenie obiektów fabryce, powiadamia obserwatorów,
-    // wykorzystuje strategię do prognozowania i zarządza strukturą kategorii.
+    // Integruje wszystkie wzorce projektowe w jedną logikę biznesową.
     public class BudgetManager
     {
-        private double MonthlyLimit;
+        private readonly double _monthlyLimit;
+        private readonly double _initialBalance;
+
         private List<Transaction> transactions = new List<Transaction>();
         private List<IBudgetObserver> observers = new List<IBudgetObserver>();
 
         private ITransactionFactory _transactionFactory;
         private IForecastingStrategy _forecastingStrategy;
 
-        public BudgetManager(double limit, ITransactionFactory factory)
+        public BudgetManager(double limit, double initialBalance, ITransactionFactory factory)
         {
-            MonthlyLimit = limit;
+            _monthlyLimit = limit;
+            _initialBalance = initialBalance;
             _transactionFactory = factory;
-            _forecastingStrategy = new AverageForecast(); // Strategia domyślna
+            _forecastingStrategy = new AverageForecast();
         }
 
-        // Dodaje transakcję, aktualizuje drzewo kategorii i uruchamia system powiadomień.
         public void AddTransaction(string type, double amount, string desc, DateTime date, string categoryName)
         {
-            // 1. Użycie Factory Method
             Transaction t = _transactionFactory.CreateTransaction(type, amount, desc, date, categoryName);
             transactions.Add(t);
 
-            // 2. Integracja z Composite - aktualizacja wartości w drzewie
+            // Obsługa Composite (Drzewo)
             var categoryNode = CategoryTree.FindByName(categoryName);
             if (categoryNode is SingleCategory singleCat)
             {
                 singleCat.AddAmount(amount);
+                Console.WriteLine($"[System] Przypisano do kategorii: {categoryName}");
             }
             else
             {
-                var otherCat = CategoryTree.FindByName("Inne") as SingleCategory;
+                string fallbackCat = t is Expense ? "Inne Wydatki" : "Inne Przychody";
+                var otherCat = CategoryTree.FindByName(fallbackCat) as SingleCategory;
                 otherCat?.AddAmount(amount);
+                Console.WriteLine($"[System] Kategoria '{categoryName}' nieznana. Przypisano do '{fallbackCat}'.");
             }
 
             Console.WriteLine($"[Manager] Dodano: {t.GetType().Name} | {t.Description}");
 
-            // 3. Powiadomienie Obserwatorów (tylko przy wydatku)
+            // Observer Notify - wywołujemy przy każdej zmianie (lub tylko przy wydatku, zależy od preferencji)
+            // Tutaj wywołujemy przy wydatku, żeby sprawdzić limity
             if (t is Expense)
             {
                 Notify();
             }
         }
 
-        public void AddObserver(IBudgetObserver observer)
-        {
-            if (!observers.Contains(observer)) observers.Add(observer);
-        }
-
         public void Notify()
         {
             double balance = CalculateBalance();
-            foreach (var obs in observers) obs.Update(balance, MonthlyLimit);
+
+            double totalExpenses = transactions.OfType<Expense>().Sum(t => t.Amount);
+
+            // Przekazujemy 3 parametry: Saldo (do życia), Limit (cel), Wydatki (realizacja celu)
+            foreach (var obs in observers)
+            {
+                obs.Update(balance, _monthlyLimit, totalExpenses);
+            }
+        }
+
+        public double CalculateBalance()
+        {
+            double income = transactions.OfType<Income>().Sum(t => t.Amount);
+            double expense = transactions.OfType<Expense>().Sum(t => t.Amount);
+            return _initialBalance + income - expense;
+        }
+
+        public void AddObserver(IBudgetObserver observer)
+        {
+            if (!observers.Contains(observer)) observers.Add(observer);
         }
 
         public void SetForecastingStrategy(IForecastingStrategy strategy)
@@ -80,17 +98,10 @@ namespace BudzetDomowy
 
         public Report GenerateReport(IReportBuilder builder)
         {
-            string stats = $"Transakcje: {transactions.Count}, Saldo: {CalculateBalance():F2} PLN";
+            string stats = $"Liczba transakcji: {transactions.Count}, Saldo: {CalculateBalance():F2} PLN (Limit: {_monthlyLimit})";
             ReportDirector director = new ReportDirector(transactions, stats, "Raport Budżetowy");
             director.Construct(builder);
             return builder.GetReport();
-        }
-
-        public double CalculateBalance()
-        {
-            double income = transactions.OfType<Income>().Sum(t => t.Amount);
-            double expense = transactions.OfType<Expense>().Sum(t => t.Amount);
-            return MonthlyLimit + income - expense;
         }
 
         public void ShowCurrentTransactions()
