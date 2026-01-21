@@ -13,7 +13,7 @@ namespace BudzetDomowy.Core.Patterns.CompositeMethod
             return FindRecursive(Root, name);
         }
 
-        // NOWOŚĆ: Metoda pomocnicza do pobierania głównej gałęzi (np. "WYDATKI")
+        // Metoda pomocnicza do pobierania głównej gałęzi (np. "WYDATKI")
         public static CategoryGroup? GetGroupByName(string name)
         {
             return Root.GetChildren()
